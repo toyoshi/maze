@@ -1,7 +1,7 @@
-# TODO: 進んだ部分の見た目を変更する。今は枠線だが通った部分に線が残るようにする
-# TOOD: 進んだ後に戻ることができるようにする
 # TODO: どのように進んだか経路を後からデータとして保存できるようにする（経路の再現）
 # TODO: Seed値が日付によって決まり同じ日には同じ経路が生成されるようにする
+# TODO: 音が鳴るようにする
+# TODO: 移動をアニメーションにする
 
 import pyxel
 import random
@@ -158,8 +158,12 @@ class Game:
             if visited and not isinstance(self.board[y][x], int) and (x % 2 == 0 or y % 2 == 0):
                 center_x = x * self.cell_size + self.cell_size // 2
                 center_y = y * self.cell_size + self.cell_size // 2
-                pyxel.line(center_x, center_y, center_x , center_y + 1, 8)  # Use red color
-                pyxel.line(center_x + 1, center_y, center_x + 1 , center_y + 1, 8)  # Use red color
+                # Draw a line with a thickness of 3 pixels
+                overwrap = 5
+                if x % 2 == 0:  # For even x, draw a horizontal line
+                    pyxel.line(center_x - self.cell_size // 2 - overwrap, center_y, center_x + self.cell_size // 2 + overwrap, center_y, 8)
+                if y % 2 == 0:  # For even y, draw a vertical line
+                    pyxel.line(center_x, center_y - self.cell_size // 2 - overwrap, center_x, center_y + self.cell_size // 2 + overwrap, 8)
         
         # スタート地点とゴール地点の描画(Start, Goalと表示)
         pyxel.text(self.start_pos[0] * self.cell_size + self.cell_size // 2 - len("Start") * pyxel.FONT_WIDTH // 2, 
