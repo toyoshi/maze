@@ -1,3 +1,8 @@
+# TODO: 進んだ部分の見た目を変更する。今は枠線だが通った部分に線が残るようにする
+# TOOD: 進んだ後に戻ることができるようにする
+# TODO: どのように進んだか経路を後からデータとして保存できるようにする（経路の再現）
+# TODO: Seed値が日付によって決まり同じ日には同じ経路が生成されるようにする
+
 import pyxel
 import random
 
@@ -70,6 +75,10 @@ class Game:
         if self.player_pos == list(self.goal_pos):
             self.game_over = True
             return
+        
+        # 進める方向がない場合はゲームオーバー
+        if not self.get_valid_moves():
+            self.game_over = True
 
         dx, dy = 0, 0
         if pyxel.btnp(pyxel.KEY_UP): dy = -2
@@ -107,6 +116,16 @@ class Game:
 
         self.player_pos = list(next_pos)
 
+    def get_valid_moves(self):
+        valid_moves = []
+        directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+        for dx, dy in directions:
+            x, y = self.player_pos[0] + dx, self.player_pos[1] + dy
+            next_pos = (x, y)
+            if self.board[y][x] != 'wall' and not self.visited[next_pos]:
+                valid_moves.append((dx, dy))
+        return valid_moves
+    
     def draw(self):
         pyxel.cls(0)
         
@@ -130,12 +149,25 @@ class Game:
                     # Adjust the position to draw the text in the center of the cell
                     text_x = center_x - len(str(elem)) * pyxel.FONT_WIDTH // 2
                     text_y = center_y - pyxel.FONT_HEIGHT // 2
-                    pyxel.text(text_x, text_y, str(elem), 0)
+                    # Increase the font size by drawing each character individually and larger
+                    for i, char in enumerate(str(elem)):
+                        pyxel.text(text_x + i * pyxel.FONT_WIDTH * 2, text_y, char, 0)
         
-        # プレーヤーが通った通路を別の色で描画
+        # Draw a line in the center of the path that the player has passed
         for (x, y), visited in self.visited.items():
-            if visited:
-                pyxel.rectb(x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size, 8)  # 赤色の枠を使用
+            if visited and not isinstance(self.board[y][x], int) and (x % 2 == 0 or y % 2 == 0):
+                center_x = x * self.cell_size + self.cell_size // 2
+                center_y = y * self.cell_size + self.cell_size // 2
+                pyxel.line(center_x, center_y, center_x , center_y + 1, 8)  # Use red color
+                pyxel.line(center_x + 1, center_y, center_x + 1 , center_y + 1, 8)  # Use red color
+        
+        # スタート地点とゴール地点の描画(Start, Goalと表示)
+        pyxel.text(self.start_pos[0] * self.cell_size + self.cell_size // 2 - len("Start") * pyxel.FONT_WIDTH // 2, 
+               self.start_pos[1] * self.cell_size + self.cell_size // 2 - pyxel.FONT_HEIGHT // 2, 
+               "Start", 8)
+        pyxel.text(self.goal_pos[0] * self.cell_size + self.cell_size // 2 - len("Goal") * pyxel.FONT_WIDTH // 2, 
+               self.goal_pos[1] * self.cell_size + self.cell_size // 2 - pyxel.FONT_HEIGHT // 2, 
+               "Goal", 8)
 
         # プレーヤーの描画
         pyxel.rect(self.player_pos[0] * self.cell_size, self.player_pos[1] * self.cell_size, self.cell_size, self.cell_size, 8)
