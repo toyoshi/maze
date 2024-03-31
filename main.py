@@ -1,9 +1,3 @@
-# TODO: どのように進んだか経路を後からデータとして保存できるようにする（経路の再現）
-# TODO: Seed値が日付によって決まり同じ日には同じ経路が生成されるようにする
-# TODO: 音が鳴るようにする
-# TODO: 移動をアニメーションにする
-# TODO: GamePad対応
-
 import pyxel
 import random
 from datetime import datetime
