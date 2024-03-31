@@ -1,6 +1,9 @@
 # ThreeNotesQuest
 
-ThreeNotesQuestは、PythonとPyxelを使用したシンプルなゲームです。
+ThreeNotesQuestは、Pythonと[pyxel](https://github.com/kitao/pyxel)を使用したシンプルなゲームです。
+
+<img width="532" alt="image" src="https://github.com/toyoshi/maze/assets/188394/5f13e1e0-9d32-41b5-9eaa-00fe22ba6fc0">
+
 
 ## インストール
 
