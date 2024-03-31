@@ -4,7 +4,6 @@
 # TODO: 移動をアニメーションにする
 
 import pyxel
-import pyperclip
 import random
 
 class Game:
@@ -18,7 +17,6 @@ class Game:
         self.reset_game()
 
         pyxel.init(self.width, self.height, title="Path Game")
-        pyxel.mouse(True)
         pyxel.run(self.update, self.draw)
 
     def reset_game(self):
@@ -72,9 +70,6 @@ class Game:
         if self.game_over:
             if pyxel.btnp(pyxel.KEY_SPACE):  # 何かキーが押されたら
                 self.reset_game()  # ゲームを初期化
-            elif pyxel.btnp(pyxel.KEY_C):  # マウスの左ボタンが押されたら
-                result_text = "Your score is: " + str(self.score)  # 結果のテキスト
-                pyperclip.copy(result_text)  # 結果のテキストをクリップボードにコピー
             return
 
         if self.player_pos == list(self.goal_pos):
@@ -197,7 +192,6 @@ class Game:
         # Display the score and instructions in the window
         pyxel.text(window_x + 20, window_y + 10, f"Score: {self.score}", 0)
         pyxel.text(window_x + 20, window_y + 20, "Press space key to restart", 0)
-        pyxel.text(window_x + 20, window_y + 30, "Press space C to copy result", 0)
 
 if __name__ == "__main__":
     Game(seed=12345)
