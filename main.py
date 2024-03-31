@@ -5,6 +5,7 @@
 
 import pyxel
 import random
+from datetime import datetime
 
 class Game:
     def __init__(self, seed=None):
@@ -194,4 +195,8 @@ class Game:
         pyxel.text(window_x + 20, window_y + 20, "Press space key to restart", 0)
 
 if __name__ == "__main__":
-    Game(seed=12345)
+    # 現在の日付を取得
+    now = datetime.now()
+    # 日付をYYYYMMDDの形式に変換
+    seed = int(now.strftime("%Y%m%d"))
+    Game(seed=seed)    # 1日ごとに同じ経路が生成される
