@@ -2,10 +2,17 @@
 # TODO: Seed値が日付によって決まり同じ日には同じ経路が生成されるようにする
 # TODO: 音が鳴るようにする
 # TODO: 移動をアニメーションにする
+# TODO: GamePad対応
 
 import pyxel
 import random
 from datetime import datetime
+
+# ブラウザで実行する場合
+try:
+    import js
+except ImportError:
+    pass
 
 class Game:
     def __init__(self, board_size=9, seed=None):
@@ -18,7 +25,7 @@ class Game:
         self.goal_pos = (self.board_size - 2, self.board_size - 2)  # ゴール地点の座標
         self.reset_game()
 
-        pyxel.init(self.width, self.height, title="Path Game")
+        pyxel.init(self.width, self.height, title="Mazzel")
         pyxel.run(self.update, self.draw)
 
     def reset_game(self):
@@ -76,6 +83,11 @@ class Game:
 
         if self.player_pos == list(self.goal_pos):
             self.game_over = True
+
+            #もしjsがあればスコアを共有
+            try: self.share_score()
+            except: pass
+
             return
         
         # 進める方向がない場合はゲームオーバー
@@ -195,9 +207,14 @@ class Game:
         pyxel.text(window_x + 20, window_y + 10, f"Score: {self.score}", 0)
         pyxel.text(window_x + 20, window_y + 20, "Press space key to restart", 0)
 
+    #Javascriptへのスコア共有用のメソッド
+    def share_score(self):
+        js.score = self.score
+
 if __name__ == "__main__":
     # 現在の日付を取得
     now = datetime.now()
     # 日付をYYYYMMDDの形式に変換
+    global seed
     seed = int(now.strftime("%Y%m%d"))
     Game(seed=seed)    # 1日ごとに同じ経路が生成される

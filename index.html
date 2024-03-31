@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mazzel</title>
+
+    <script src="https://cdn.jsdelivr.net/gh/kitao/pyxel/wasm/pyxel.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
+    <script>
+        var score = 0;
+        function copyToClipboard(score = 0) {
+            if (score <= 50) {
+                messages_50 = [
+                    "Is this a horse or a cow? I'm still figuring it out.",
+                    "I might have mistaken the moon for a bright lamp.",
+                    "Socks with sandals? That's high fashion, right?",
+                    "I thought Wi-Fi was a new kind of smoothie.",
+                    "To me, every cat is a tiger in disguise.",
+                    "I tried to pause an audiobook... by hitting the book.",
+                    "I waited for a stop sign to turn green.",
+                    "Thought 'The Internet' was a big library in Europe.",
+                    "Is the sea salty because the shore never waves back?",
+                    "I looked for my glasses while wearing them."
+                ]
+                message = random.choice(messages_50);
+            } else if (score <= 100) {
+                message = 'I know addition and multiplication.';
+            } else if (score <= 150) {
+                message = 'I always have above-average intelligence.';
+            } else {
+                message = 'My IQ is 530,000.';
+            }
+            var text = 'Score:' + score + ' ' + message ;
+            navigator.clipboard.writeText(text).then(function() {
+                console.log('Copying to clipboard was successful!');
+                document.getElementById('scoreButton').textContent = 'Copied!';
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+    </script>
+    <style>
+        .button-container {
+            display: flex;
+            justify-content: center;
+            position: fixed;
+            bottom: 5%;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <pyxel-run root="." gamepad="enabled" name="main.py"></pyxel-run>
+    
+    <div class="button-container">
+        <button id="scoreButton" class="button is-small is-rounded" onclick="copyToClipboard(score)">Share Your Score</button>
+    </div>
+</body>
+</html>
