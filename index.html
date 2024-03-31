@@ -31,7 +31,7 @@
             } else {
                 message = 'My IQ is 530,000.';
             }
-            var text = 'Score:' + score + ' 🎉 ' + message + ' #ThreeNotesQuest';
+            var text = 'Score:' + score + ' 🎉 ' + message + '#ThreeNotesQuest';
             navigator.clipboard.writeText(text).then(function() {
                 console.log('Copying to clipboard was successful!');
                 document.getElementById('scoreButton').textContent = 'Copied!';
@@ -54,7 +54,7 @@
     <pyxel-run root="." gamepad="enabled" name="main.py"></pyxel-run>
     
     <div class="button-container">
-        <button id="scoreButton" class="button is-small is-rounded" onclick="copyToClipboard(score)" ontouchstart="copyToClipboard(score)">Share Your Score</button>
+        <button id="scoreButton" class="button is-small is-rounded" onclick="copyToClipboard(score)">Share Your Score</button>
     </div>
 </body>
 </html>
