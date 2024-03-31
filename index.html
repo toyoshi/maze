@@ -23,7 +23,7 @@
                     "Is the sea salty because the shore never waves back?",
                     "I looked for my glasses while wearing them."
                 ]
-                message = random.choice(messages_50);
+                message = messages_50[Math.floor(Math.random() * messages_50.length)];
             } else if (score <= 100) {
                 message = 'I know addition and multiplication.';
             } else if (score <= 150) {
@@ -31,7 +31,7 @@
             } else {
                 message = 'My IQ is 530,000.';
             }
-            var text = 'Score:' + score + ' ' + message ;
+            var text = 'Score:' + score + ' 🎉 ' + message ;
             navigator.clipboard.writeText(text).then(function() {
                 console.log('Copying to clipboard was successful!');
                 document.getElementById('scoreButton').textContent = 'Copied!';
