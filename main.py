@@ -8,13 +8,14 @@ import random
 from datetime import datetime
 
 class Game:
-    def __init__(self, seed=None):
+    def __init__(self, board_size=9, seed=None):
         self.seed = seed
+        self.board_size = board_size
         self.width = 256
         self.height = 256
-        self.cell_size = self.width // 9
+        self.cell_size = self.width // self.board_size
         self.start_pos = (1, 1)  # スタート地点の座標
-        self.goal_pos = (7, 7)  # ゴール地点の座標
+        self.goal_pos = (self.board_size - 2, self.board_size - 2)  # ゴール地点の座標
         self.reset_game()
 
         pyxel.init(self.width, self.height, title="Path Game")
@@ -31,18 +32,18 @@ class Game:
 
     def init_game(self):
         # 交差点と通路の設定
-        self.board = [[' ' for _ in range(9)] for _ in range(9)]
+        self.board = [[' ' for _ in range(self.board_size)] for _ in range(self.board_size)]
         # 外壁と内壁の設定
-        for y in range(9):
-            for x in range(9):
-                if x == 0 or x == 8 or y == 0 or y == 8:  # 外壁
+        for y in range(self.board_size):
+            for x in range(self.board_size):
+                if x == 0 or x == self.board_size - 1 or y == 0 or y == self.board_size - 1:  # 外壁
                     self.board[y][x] = 'wall'
                 elif y % 2 == 0 and x % 2 == 0:  # 内壁
                     self.board[y][x] = 'wall'
 
         # 交差点の得点設定
-        for y in range(1, 8, 2):
-            for x in range(1, 9, 2):
+        for y in range(1, self.board_size - 1, 2):
+            for x in range(1, self.board_size - 1, 2):
                 if (x, y) not in [self.start_pos, self.goal_pos]:
                     self.board[y][x] = random.choice([1, 2, 3])
 
@@ -51,15 +52,15 @@ class Game:
         random.shuffle(multipliers)
         for multiplier in multipliers:
             while True:
-                x = random.choice(range(1, 9, 2))
-                y = random.choice(range(1, 8, 2))
+                x = random.choice(range(1, self.board_size - 1, 2))
+                y = random.choice(range(1, self.board_size - 1, 2))
                 if (x, y) not in [self.start_pos, self.goal_pos] and isinstance(self.board[y][x], int):
                     self.board[y][x] = multiplier
                     break
 
         # 訪問済みリストの初期化
-        for y in range(9):
-            for x in range(9):
+        for y in range(self.board_size):
+            for x in range(self.board_size):
                 self.visited[(x, y)] = False
 
         # スタートとゴールの設定
@@ -93,7 +94,7 @@ class Game:
         # 通路の中間地点の座標
         mid_x, mid_y = (self.player_pos[0] + next_x) // 2, (self.player_pos[1] + next_y) // 2
 
-        if (0 <= next_x < 9 and 0 <= next_y < 9 and 
+        if (0 <= next_x < self.board_size and 0 <= next_y < self.board_size and 
             self.board[next_y][next_x] != 'wall' and 
             not self.visited[(mid_x, mid_y)]):
 
@@ -131,8 +132,8 @@ class Game:
         pyxel.cls(0)
         
         # 壁、通路、交差点の描画
-        for y in range(9):
-            for x in range(9):
+        for y in range(self.board_size):
+            for x in range(self.board_size):
                 elem = self.board[y][x]
                 if elem == 'wall':
                     color = 0  # 黒色
