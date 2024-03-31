@@ -77,7 +77,12 @@ class Game:
 
     def update(self):
         if self.game_over:
-            if pyxel.btnp(pyxel.KEY_SPACE):  # 何かキーが押されたら
+            if (pyxel.btnp(pyxel.KEY_SPACE) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_Y) or 
+                pyxel.btnp(pyxel.KEY_A)):  # 何かキーが押されたら
                 self.reset_game()  # ゲームを初期化
             return
 
@@ -95,10 +100,10 @@ class Game:
             self.game_over = True
 
         dx, dy = 0, 0
-        if pyxel.btnp(pyxel.KEY_UP): dy = -2
-        elif pyxel.btnp(pyxel.KEY_DOWN): dy = 2
-        elif pyxel.btnp(pyxel.KEY_LEFT): dx = -2
-        elif pyxel.btnp(pyxel.KEY_RIGHT): dx = 2
+        if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP): dy = -2
+        elif pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): dy = 2
+        elif pyxel.btnp(pyxel.KEY_LEFT) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT): dx = -2
+        elif pyxel.btnp(pyxel.KEY_RIGHT) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): dx = 2
 
         # 移動先が通路または交差点であり、まだ訪問していないことをチェック
         next_x, next_y = self.player_pos[0] + dx, self.player_pos[1] + dy
@@ -205,7 +210,7 @@ class Game:
         pyxel.rect(window_x, window_y, window_width, window_height, 6)
         # Display the score and instructions in the window
         pyxel.text(window_x + 20, window_y + 10, f"Score: {self.score}", 0)
-        pyxel.text(window_x + 20, window_y + 20, "Press space key to restart", 0)
+        pyxel.text(window_x + 20, window_y + 20, "Press space or a key to restart", 0)
 
     #Javascriptへのスコア共有用のメソッド
     def share_score(self):
