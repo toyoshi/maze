@@ -25,7 +25,7 @@ class Game:
         self.goal_pos = (self.board_size - 2, self.board_size - 2)  # ゴール地点の座標
         self.reset_game()
 
-        pyxel.init(self.width, self.height, title="Mazzel")
+        pyxel.init(self.width, self.height, title="ThreeNotesQuest")
         pyxel.run(self.update, self.draw)
 
     def reset_game(self):

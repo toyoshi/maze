@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mazzel</title>
+    <title>ThreeNotesQuest</title>
 
     <script src="https://cdn.jsdelivr.net/gh/kitao/pyxel/wasm/pyxel.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
@@ -31,7 +31,7 @@
             } else {
                 message = 'My IQ is 530,000.';
             }
-            var text = 'Score:' + score + ' 🎉 ' + message ;
+            var text = 'Score:' + score + ' 🎉 ' + message + ' #ThreeNotesQuest';
             navigator.clipboard.writeText(text).then(function() {
                 console.log('Copying to clipboard was successful!');
                 document.getElementById('scoreButton').textContent = 'Copied!';
