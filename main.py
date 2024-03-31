@@ -205,6 +205,7 @@ class Game:
         # Display the score and instructions in the window
         pyxel.text(window_x + 20, window_y + 10, f"Score: {self.score}", 0)
         pyxel.text(window_x + 20, window_y + 20, "Press space or a key to restart", 0)
+        pyxel.text(5, self.height - 10, "Hint: A different maze明日になれば違う経路が生成されることを表示 will be generated tomorrow", 7)
 
     #Javascriptへのスコア共有用のメソッド
     def share_score(self):
