@@ -12,16 +12,11 @@
         function copyToClipboard(score = 0) {
             if (score <= 50) {
                 messages_50 = [
-                    "Is this a horse or a cow? I'm still figuring it out.",
-                    "I might have mistaken the moon for a bright lamp.",
-                    "Socks with sandals? That's high fashion, right?",
-                    "I thought Wi-Fi was a new kind of smoothie.",
-                    "To me, every cat is a tiger in disguise.",
-                    "I tried to pause an audiobook... by hitting the book.",
-                    "I waited for a stop sign to turn green.",
-                    "Thought 'The Internet' was a big library in Europe.",
-                    "Is the sea salty because the shore never waves back?",
-                    "I looked for my glasses while wearing them."
+                    "Is this a horse or a deer? I'm still figuring it out.",
+                    "I sleep with my eyes open. Can't sleep if I can't see.", 
+                    "I heard fish breathe underwater, so if they drink water, they'll drown.", 
+                    "Every time I cross this bridge, it feels like it's getting longer.", 
+                    "I thought if I read the book upside down, the story would turn around.",
                 ]
                 message = messages_50[Math.floor(Math.random() * messages_50.length)];
             } else if (score < 150) {
@@ -31,7 +26,7 @@
             } else {
                 message = 'My IQ is 530,000.';
             }
-            var text = 'Score:' + score + ' 🎉 ' + message + ' #ThreeNotesQuest';
+            var text = 'Score:' + score + ' 🎉 ' + message + ' #ThreeNotesQuest https://threen.netlify.app/';
             navigator.clipboard.writeText(text).then(function() {
                 console.log('Copying to clipboard was successful!');
                 document.getElementById('scoreButton').textContent = 'Copied!';
