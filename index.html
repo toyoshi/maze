@@ -10,23 +10,7 @@
     <script>
         var score = 0;
         function copyToClipboard(score = 0) {
-            if (score <= 50) {
-                messages_50 = [
-                    "Is this a horse or a deer? I'm still figuring it out.",
-                    "I sleep with my eyes open. Can't sleep if I can't see.", 
-                    "I heard fish breathe underwater, so if they drink water, they'll drown.", 
-                    "Every time I cross this bridge, it feels like it's getting longer.", 
-                    "I thought if I read the book upside down, the story would turn around.",
-                ]
-                message = messages_50[Math.floor(Math.random() * messages_50.length)];
-            } else if (score < 150) {
-                message = 'I know addition and multiplication.';
-            } else if (score < 200) {
-                message = 'I always have above-average intelligence.';
-            } else {
-                message = 'My IQ is 530,000.';
-            }
-            var text = 'Score:' + score + ' 🎉 ' + message + ' #ThreeNotesQuest https://threen.netlify.app/';
+            var text = 'Score:' + score + ' 🎉 ' + ' #ThreeNotesQuest https://threen.netlify.app/';
             navigator.clipboard.writeText(text).then(function() {
                 console.log('Copying to clipboard was successful!');
                 document.getElementById('scoreButton').textContent = 'Copied!';
