@@ -10,14 +10,21 @@
     <script>
         var score = 0;
         function copyToClipboard(score = 0) {
-            var text = 'Score:' + score + ' 🎉 ' + ' #ThreeNotesQuest https://threen.netlify.app/';
-            navigator.clipboard.writeText(text).then(function() {
-                console.log('Copying to clipboard was successful!');
-                document.getElementById('scoreButton').textContent = 'Copied!';
-            }, function(err) {
-                console.error('Could not copy text: ', err);
-            });
-        }
+        var text = 'Score:' + score + ' 🎉 ' + ' #ThreeNotesQuest https://threen.netlify.app/';
+        var scoreButton = document.getElementById('scoreButton');
+        var originalText = scoreButton.textContent;
+
+        navigator.clipboard.writeText(text).then(function() {
+            console.log('Copying to clipboard was successful!');
+            scoreButton.textContent = 'Copied!';
+
+            setTimeout(function() {
+                scoreButton.textContent = originalText;
+            }, 1000);
+        }, function(err) {
+            console.error('Could not copy text: ', err);
+        });
+    }
     </script>
     <style>
         .button-container {
