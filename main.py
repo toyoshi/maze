@@ -71,14 +71,9 @@ class Game:
 
     def update(self):
         if self.game_over:
-            if (pyxel.btnp(pyxel.KEY_SPACE) or 
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A) or 
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or 
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X) or 
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_Y) or 
-                pyxel.btnp(pyxel.KEY_A)):  # 何かキーが押されたら
+            if self.is_reset_button_pressed():
                 self.reset_game()  # ゲームを初期化
-            return
+                return
 
         if self.player_pos == list(self.goal_pos):
             self.game_over = True
@@ -89,8 +84,8 @@ class Game:
 
             return
         
-        # 進める方向がない場合はゲームオーバー
-        if not self.get_valid_moves():
+        # 進める方向がない場合ゲームオーバー
+        if not self.get_valid_moves() or self.is_reset_button_pressed():
             self.game_over = True
 
         dx, dy = 0, 0
@@ -210,6 +205,14 @@ class Game:
     #Javascriptへのスコア共有用のメソッド
     def share_score(self):
         js.score = self.score
+    
+    def is_reset_button_pressed(self):
+        return (pyxel.btnp(pyxel.KEY_SPACE) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X) or 
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_Y) or 
+                pyxel.btnp(pyxel.KEY_A))  # 何かキーが押されたら
 
 if __name__ == "__main__":
     # 現在の日付を取得
