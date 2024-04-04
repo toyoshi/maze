@@ -28,7 +28,6 @@ class Game:
         self.score = 0  # スコア
         self.game_over = False
         self.visited = {}  # 訪問済みの通路を追跡
-        self.multiplier_used = set()  # 使用済みのマルチプライヤーを追跡
         self.init_game()
 
     def init_game(self):
@@ -118,9 +117,8 @@ class Game:
         # 移動先が得点の場合のみスコアを加算
         if (dx != 0 or dy != 0) and isinstance(score, int):
             self.score += score
-        elif isinstance(score, str) and score in ['x2', 'x3'] and next_pos not in self.multiplier_used:
+        elif isinstance(score, str) and score in ['x2', 'x3']:
             self.score *= int(score[1])
-            self.multiplier_used.add(next_pos)
 
         self.player_pos = list(next_pos)
 
