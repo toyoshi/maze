@@ -10,7 +10,12 @@
     <script>
         var score = 0;
         function copyToClipboard(score = 0) {
-        var text = 'Score:' + score + ' 🎉 ' + ' #ThreeNotesQuest https://threen.netlify.app/';
+            var today = new Date();
+            var dd = String(today.getDate()).padStart(2, '0');
+            var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+            var currentDate = mm + '/' + dd;
+
+            var text = 'Score:' + score + ' 🎉 mapid:' + currentDate + ' #ThreeNotesQuest https://threen.netlify.app/';
         var scoreButton = document.getElementById('scoreButton');
         var originalText = scoreButton.textContent;
 
