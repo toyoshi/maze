@@ -1,51 +1,44 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ThreeNotesQuest</title>
-
-    <script src="https://cdn.jsdelivr.net/gh/kitao/pyxel/wasm/pyxel.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
-    <script>
-        var score = 0;
-        function copyToClipboard(score = 0) {
-            var today = new Date();
-            var dd = String(today.getDate()).padStart(2, '0');
-            var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
-            var currentDate = mm + '/' + dd;
-
-            var text = 'Score:' + score + ' 🎉 mapid:' + currentDate + ' #ThreeNotesQuest https://threen.netlify.app/';
-        var scoreButton = document.getElementById('scoreButton');
-        var originalText = scoreButton.textContent;
-
-        navigator.clipboard.writeText(text).then(function() {
-            console.log('Copying to clipboard was successful!');
-            scoreButton.textContent = 'Copied!';
-
-            setTimeout(function() {
-                scoreButton.textContent = originalText;
-            }, 1000);
-        }, function(err) {
-            console.error('Could not copy text: ', err);
-        });
-    }
-    </script>
-    <style>
-        .button-container {
-            display: flex;
-            justify-content: center;
-            position: fixed;
-            bottom: 5%;
-            width: 100%;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <title>ThreeNotesQuest</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="share.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/gh/kitao/pyxel@v3.0.1/wasm/pyxel.js" defer></script>
 </head>
 <body>
-    <pyxel-run root="." gamepad="enabled" name="main.py"></pyxel-run>
-    
-    <div class="button-container">
-        <button id="scoreButton" class="button is-small" ontouchend="copyToClipboard(score)" onclick="copyToClipboard(score)">Share Your Score</button>
-    </div>
+  <main>
+    <header><p class="eyebrow">DAILY ROUTE PUZZLE</p><h1>Three Notes Quest</h1>
+      <p>数字と倍率をつなぎ、今日の最高点を探そう。</p></header>
+    <section class="game" aria-label="ゲーム画面">
+      <div id="pyxel-screen"><pyxel-run root="." name="main.py"></pyxel-run></div>
+    </section>
+    <p id="result" role="status" aria-live="polite">画面をタップしてスタート</p>
+    <section class="controls" aria-label="ゲーム操作">
+      <div class="dpad" aria-label="移動">
+        <button class="up" data-action="up" aria-label="上へ">▲</button>
+        <button class="left" data-action="left" aria-label="左へ">◀</button>
+        <button class="down" data-action="down" aria-label="下へ">▼</button>
+        <button class="right" data-action="right" aria-label="右へ">▶</button>
+      </div>
+      <div class="actions">
+        <button data-action="undo" id="undoButton" disabled>↶ 1手戻す</button>
+        <button data-action="reset">最初から</button>
+        <button data-action="mute" id="soundButton" aria-pressed="true">音 ON</button>
+      </div>
+    </section>
+    <button id="shareButton" class="share" disabled>画像でシェア / 保存</button>
+    <p id="shareStatus" role="status" aria-live="polite"></p>
+    <details><summary>遊び方・操作</summary>
+      <p>同じ道は一度だけ通れます。別の道から同じ数字や倍率に入ると、もう一度加算・乗算されます。ゴールに入ると終了です。</p>
+      <p>反対方向のボタン、または「1手戻す」でスコアも経路も元に戻せます。ゴール後や行き止まりからも戻せます。</p>
+      <p>理論最高点は、この盤面でゴールまでに獲得できる最大スコアです。最高点でゴールするとPERFECTになります。日付はゲーム開始時の端末の日付です。</p>
+      <p>キーボード：矢印で移動、Zで戻す、Spaceでリセット、Mで音の切替。ゲームパッド：十字キー、Bで戻す、Aでリセット。</p>
+      <p>シェア画像には経路・現在位置・手数を載せません。画像共有は対応ブラウザの共有メニューを使います。未対応の場合はPNGを保存します。</p>
+    </details>
+  </main>
 </body>
 </html>

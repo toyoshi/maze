@@ -1,221 +1,301 @@
-import pyxel
+"""ThreeNotesQuest: deterministic rules, exact solver, and a thin Pyxel view."""
+
+import json
 import random
 from datetime import datetime
 
-# ブラウザで実行する場合
+try:
+    import pyxel
+except ImportError:
+    pyxel = None
 try:
     import js
 except ImportError:
-    pass
+    js = None
 
-class Game:
+
+class GameState:
+    """No graphics or audio dependencies; every successful move is reversible."""
+
     def __init__(self, board_size=9, seed=None):
-        self.seed = seed
+        if board_size not in (7, 9):
+            raise ValueError("board_size must be 7 or 9")
         self.board_size = board_size
-        self.width = 256
-        self.height = 256
-        self.cell_size = self.width // self.board_size
-        self.start_pos = (1, 1)  # スタート地点の座標
-        self.goal_pos = (self.board_size - 2, self.board_size - 2)  # ゴール地点の座標
+        self.seed = seed
+        self.start_pos = (1, 1)
+        self.goal_pos = (board_size - 2, board_size - 2)
         self.reset_game()
 
-        pyxel.init(self.width, self.height, title="ThreeNotesQuest")
-        pyxel.run(self.update, self.draw)
-
     def reset_game(self):
-        random.seed(self.seed)
-        self.player_pos = list(self.start_pos)  # プレーヤーの初期位置をスタート地点に設定
-        self.score = 0  # スコア
-        self.game_over = False
-        self.visited = {}  # 訪問済みの通路を追跡
-        self.init_game()
-
-    def init_game(self):
-        # 交差点と通路の設定
-        self.board = [[' ' for _ in range(self.board_size)] for _ in range(self.board_size)]
-        # 外壁と内壁の設定
-        for y in range(self.board_size):
-            for x in range(self.board_size):
-                if x == 0 or x == self.board_size - 1 or y == 0 or y == self.board_size - 1:  # 外壁
-                    self.board[y][x] = 'wall'
-                elif y % 2 == 0 and x % 2 == 0:  # 内壁
-                    self.board[y][x] = 'wall'
-
-        # 交差点の得点設定
-        for y in range(1, self.board_size - 1, 2):
-            for x in range(1, self.board_size - 1, 2):
-                if (x, y) not in [self.start_pos, self.goal_pos]:
-                    self.board[y][x] = random.choice([1, 2, 3])
-
-        # x2 and x3 multipliers are placed at random positions
-        multipliers = ['x2', 'x2', 'x3']
-        random.shuffle(multipliers)
+        rng = random.Random(self.seed)
+        n = self.board_size
+        self.board = [[" " for _ in range(n)] for _ in range(n)]
+        for y in range(n):
+            for x in range(n):
+                if x in (0, n - 1) or y in (0, n - 1) or (x % 2 == 0 and y % 2 == 0):
+                    self.board[y][x] = "wall"
+        for y in range(1, n - 1, 2):
+            for x in range(1, n - 1, 2):
+                if (x, y) not in (self.start_pos, self.goal_pos):
+                    self.board[y][x] = rng.choice([1, 2, 3])
+        multipliers = ["x2", "x2", "x3"]
+        rng.shuffle(multipliers)
         for multiplier in multipliers:
             while True:
-                x = random.choice(range(1, self.board_size - 1, 2))
-                y = random.choice(range(1, self.board_size - 1, 2))
-                if (x, y) not in [self.start_pos, self.goal_pos] and isinstance(self.board[y][x], int):
+                x = rng.choice(range(1, n - 1, 2))
+                y = rng.choice(range(1, n - 1, 2))
+                if (x, y) not in (self.start_pos, self.goal_pos) and isinstance(
+                    self.board[y][x], int
+                ):
                     self.board[y][x] = multiplier
                     break
+        self.board[1][1] = "start"
+        self.board[self.goal_pos[1]][self.goal_pos[0]] = "goal"
+        self.player_pos = list(self.start_pos)
+        self.score = 0
+        self.visited = {(x, y): False for y in range(n) for x in range(n)}
+        self.visited[self.start_pos] = True
+        self.history = []
+        self.game_over = False
+        self.maximum_score = self.solve_maximum()
 
-        # 訪問済みリストの初期化
-        for y in range(self.board_size):
-            for x in range(self.board_size):
-                self.visited[(x, y)] = False
-
-        # スタートとゴールの設定
-        self.board[self.start_pos[1]][self.start_pos[0]] = 'start'
-        self.board[self.goal_pos[1]][self.goal_pos[0]] = 'goal'
-        self.visited[self.start_pos] = True  # スタート地点を訪問済みとする
-
-    def update(self):
-        if self.game_over:
-            if self.is_reset_button_pressed():
-                self.reset_game()  # ゲームを初期化
-                return
-
-        if self.player_pos == list(self.goal_pos):
-            self.game_over = True
-
-            #もしjsがあればスコアを共有
-            try: self.share_score()
-            except: pass
-
-            return
-        
-        # 進める方向がない場合ゲームオーバー
-        if not self.get_valid_moves() or self.is_reset_button_pressed():
-            self.game_over = True
-
-        dx, dy = 0, 0
-        if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP): dy = -2
-        elif pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN): dy = 2
-        elif pyxel.btnp(pyxel.KEY_LEFT) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT): dx = -2
-        elif pyxel.btnp(pyxel.KEY_RIGHT) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT): dx = 2
-
-        # 移動先が通路または交差点であり、まだ訪問していないことをチェック
-        next_x, next_y = self.player_pos[0] + dx, self.player_pos[1] + dy
-
-        # 通路の中間地点の座標
-        mid_x, mid_y = (self.player_pos[0] + next_x) // 2, (self.player_pos[1] + next_y) // 2
-
-        if (0 <= next_x < self.board_size and 0 <= next_y < self.board_size and 
-            self.board[next_y][next_x] != 'wall' and 
-            not self.visited[(mid_x, mid_y)]):
-
-            # 通路を訪問済みとマーク
-            self.visited[(next_x, next_y)] = True
-            # 前回の場所から今の場所の間にあった通路もマーク
-            self.visited[(mid_x, mid_y)] = True
-
-            self.move_player(dx, dy)
-
-    def move_player(self, dx, dy):
-        next_pos = (self.player_pos[0] + dx, self.player_pos[1] + dy)
-        score = self.board[next_pos[1]][next_pos[0]]
-
-        # 移動先が得点の場合のみスコアを加算
-        if (dx != 0 or dy != 0) and isinstance(score, int):
-            self.score += score
-        elif isinstance(score, str) and score in ['x2', 'x3']:
-            self.score *= int(score[1])
-
-        self.player_pos = list(next_pos)
+    @staticmethod
+    def score_after(score, tile):
+        if isinstance(tile, int):
+            return score + tile
+        if tile in ("x2", "x3"):
+            return score * int(tile[1])
+        return score
 
     def get_valid_moves(self):
-        valid_moves = []
-        directions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-        for dx, dy in directions:
-            x, y = self.player_pos[0] + dx, self.player_pos[1] + dy
-            next_pos = (x, y)
-            if self.board[y][x] != 'wall' and not self.visited[next_pos]:
-                valid_moves.append((dx, dy))
-        return valid_moves
-    
-    def draw(self):
-        pyxel.cls(0)
-        
-        # 壁、通路、交差点の描画
-        for y in range(self.board_size):
-            for x in range(self.board_size):
-                elem = self.board[y][x]
-                if elem == 'wall':
-                    color = 0  # 黒色
+        x, y = self.player_pos
+        moves = []
+        for dx, dy in ((0, -2), (0, 2), (-2, 0), (2, 0)):
+            nx, ny = x + dx, y + dy
+            if (
+                0 <= nx < self.board_size
+                and 0 <= ny < self.board_size
+                and self.board[ny][nx] != "wall"
+                and not self.visited[(x + dx // 2, y + dy // 2)]
+            ):
+                moves.append((dx, dy))
+        return moves
+
+    def move_player(self, dx, dy):
+        if self.game_over or (dx, dy) not in self.get_valid_moves():
+            return False
+        self.history.append((self.player_pos[:], self.score, self.visited.copy()))
+        x, y = self.player_pos
+        self.visited[(x + dx // 2, y + dy // 2)] = True
+        self.player_pos = [x + dx, y + dy]
+        self.visited[tuple(self.player_pos)] = True
+        self.score = self.score_after(self.score, self.board[y + dy][x + dx])
+        self.game_over = tuple(self.player_pos) == self.goal_pos or not self.get_valid_moves()
+        return True
+
+    def undo(self):
+        if not self.history:
+            return False
+        self.player_pos, self.score, self.visited = self.history.pop()
+        self.game_over = False
+        return True
+
+    def step(self, dx, dy):
+        # The reverse arrow retraces the last edge; Z / Undo also works at the goal.
+        if self.history:
+            previous = self.history[-1][0]
+            if [self.player_pos[0] + dx, self.player_pos[1] + dy] == previous:
+                return "undo" if self.undo() else None
+        return "move" if self.move_player(dx, dy) else None
+
+    def solve_maximum(self):
+        """Exhaustive edge-trail search, stopping at the goal.
+
+        For equal (position, used edges), only the largest score matters:
+        all future additions and multiplications are monotone. Undo does not
+        increase the optimum because it restores the entire previous state.
+        """
+        nodes = [
+            (x, y)
+            for y in range(1, self.board_size - 1, 2)
+            for x in range(1, self.board_size - 1, 2)
+        ]
+        graph = {p: [] for p in nodes}
+        edge = 1
+        for x, y in nodes:
+            for q in ((x + 2, y), (x, y + 2)):
+                if q in graph:
+                    graph[(x, y)].append((q, edge))
+                    graph[q].append(((x, y), edge))
+                    edge <<= 1
+        stack = [(self.start_pos, 0, 0)]
+        seen = {}
+        maximum = 0
+        while stack:
+            position, used, score = stack.pop()
+            key = (position, used)
+            if seen.get(key, -1) >= score:
+                continue
+            seen[key] = score
+            if position == self.goal_pos:
+                maximum = max(maximum, score)
+                continue
+            for q, bit in graph[position]:
+                if not used & bit:
+                    stack.append((q, used | bit, self.score_after(score, self.board[q[1]][q[0]])))
+        return maximum
+
+    def share_state(self):
+        won = tuple(self.player_pos) == self.goal_pos
+        return {
+            "mapId": str(self.seed) if self.seed is not None else "random",
+            "board": self.board,
+            "player": self.player_pos,
+            "score": self.score,
+            "visited": [[x, y] for (x, y), used in self.visited.items() if used],
+            "maximum": self.maximum_score,
+            "moves": len(self.history),
+            "status": "perfect"
+            if won and self.score == self.maximum_score
+            else "clear"
+            if won
+            else "stuck"
+            if self.game_over
+            else "playing",
+        }
+
+
+class Game(GameState):
+    def __init__(self, board_size=9, seed=None):
+        if pyxel is None:
+            raise RuntimeError("Install Pyxel: pip install -r requirements.txt")
+        self.sound_enabled = True
+        super().__init__(board_size, seed)
+        self.width, self.height = 256, 304
+        self.cell_size = 26 if board_size == 9 else 33
+        self.board_x = (self.width - board_size * self.cell_size) // 2
+        self.board_y = 35
+        pyxel.init(self.width, self.height, title="ThreeNotesQuest")
+        # Short, distinct cues: move, multiplier, undo, goal, blocked.
+        for index, (notes, tone, speed) in enumerate(
+            [
+                ("c3e3", "p", 5),
+                ("e3g3c4", "t", 5),
+                ("e3c3", "p", 5),
+                ("c3e3g3c4", "t", 8),
+                ("c2", "n", 5),
+            ]
+        ):
+            pyxel.sounds[index].set(notes, tone, "4", "f", speed)
+        self.publish_state()
+        pyxel.run(self.update, self.draw)
+
+    def publish_state(self):
+        if js is not None:
+            js.updateGameState(json.dumps(self.share_state()))
+
+    def update(self):
+        action = ""
+        if js is not None:
+            action = str(js.pendingGameAction)
+            js.pendingGameAction = ""
+        if pyxel.btnp(pyxel.KEY_M) or action == "mute":
+            self.sound_enabled = not self.sound_enabled
+            if not self.sound_enabled:
+                pyxel.stop()
+            if js is not None:
+                js.setSoundEnabled(self.sound_enabled)
+        if pyxel.btnp(pyxel.KEY_Z) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or action == "undo":
+            if self.undo():
+                self.play_sound(2)
+                self.publish_state()
+            return
+        if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A) or action == "reset":
+            self.reset_game()
+            self.publish_state()
+            return
+        directions = [
+            ("up", pyxel.KEY_UP, pyxel.GAMEPAD1_BUTTON_DPAD_UP, 0, -2),
+            ("down", pyxel.KEY_DOWN, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN, 0, 2),
+            ("left", pyxel.KEY_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, -2, 0),
+            ("right", pyxel.KEY_RIGHT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT, 2, 0),
+        ]
+        for name, key, pad, dx, dy in directions:
+            if pyxel.btnp(key) or pyxel.btnp(pad) or action == name:
+                result = self.step(dx, dy)
+                if result:
+                    tile = self.board[self.player_pos[1]][self.player_pos[0]]
+                    cue = (
+                        2
+                        if result == "undo"
+                        else 3
+                        if tuple(self.player_pos) == self.goal_pos
+                        else 1
+                        if tile in ("x2", "x3")
+                        else 0
+                    )
+                    self.play_sound(cue)
+                    self.publish_state()
                 else:
-                    color = 7  # 白色
+                    self.play_sound(4)
+                break
 
-                # 交差点や通路を描画
-                pyxel.rect(x * self.cell_size, y * self.cell_size, self.cell_size, self.cell_size, color)
+    def play_sound(self, index):
+        if self.sound_enabled:
+            pyxel.play(0, index)
 
-                # Display scores or multipliers
-                if isinstance(elem, int) or elem in ['x2', 'x3']:
-                    # Calculate the center of the cell
-                    center_x = x * self.cell_size + self.cell_size // 2
-                    center_y = y * self.cell_size + self.cell_size // 2
-                    # Adjust the position to draw the text in the center of the cell
-                    text_x = center_x - len(str(elem)) * pyxel.FONT_WIDTH // 2
-                    text_y = center_y - pyxel.FONT_HEIGHT // 2
-                    # Increase the font size by drawing each character individually and larger
-                    for i, char in enumerate(str(elem)):
-                        pyxel.text(text_x + i * pyxel.FONT_WIDTH * 2, text_y, char, 0)
-        
-        # Draw a line in the center of the path that the player has passed
-        for (x, y), visited in self.visited.items():
-            if visited and not isinstance(self.board[y][x], int) and (x % 2 == 0 or y % 2 == 0):
-                center_x = x * self.cell_size + self.cell_size // 2
-                center_y = y * self.cell_size + self.cell_size // 2
-                # Draw a line with a thickness of 3 pixels
-                overwrap = 5
-                if x % 2 == 0:  # For even x, draw a horizontal line
-                    pyxel.line(center_x - self.cell_size // 2 - overwrap, center_y, center_x + self.cell_size // 2 + overwrap, center_y, 8)
-                if y % 2 == 0:  # For even y, draw a vertical line
-                    pyxel.line(center_x, center_y - self.cell_size // 2 - overwrap, center_x, center_y + self.cell_size // 2 + overwrap, 8)
-        
-        # スタート地点とゴール地点の描画(Start, Goalと表示)
-        pyxel.text(self.start_pos[0] * self.cell_size + self.cell_size // 2 - len("Start") * pyxel.FONT_WIDTH // 2, 
-               self.start_pos[1] * self.cell_size + self.cell_size // 2 - pyxel.FONT_HEIGHT // 2, 
-               "Start", 8)
-        pyxel.text(self.goal_pos[0] * self.cell_size + self.cell_size // 2 - len("Goal") * pyxel.FONT_WIDTH // 2, 
-               self.goal_pos[1] * self.cell_size + self.cell_size // 2 - pyxel.FONT_HEIGHT // 2, 
-               "Goal", 8)
+    def center(self, x, y):
+        return (
+            self.board_x + x * self.cell_size + self.cell_size // 2,
+            self.board_y + y * self.cell_size + self.cell_size // 2,
+        )
 
-        # プレーヤーの描画
-        pyxel.rect(self.player_pos[0] * self.cell_size, self.player_pos[1] * self.cell_size, self.cell_size, self.cell_size, 8)
+    @staticmethod
+    def text_center(x, y, text, color):
+        pyxel.text(x - len(text) * pyxel.FONT_WIDTH // 2, y - 2, text, color)
 
-        # スコアの表示
-        pyxel.text(5, 5, f"Score: {self.score}", 7)
+    def draw(self):
+        pyxel.cls(1)
+        pyxel.text(12, 9, "THREE NOTES QUEST", 7)
+        pyxel.text(12, 22, f"SCORE {self.score}", 10)
+        pyxel.text(137, 22, f"BEST POSSIBLE {self.maximum_score}", 11)
+        size = self.cell_size
+        for y, row in enumerate(self.board):
+            for x, tile in enumerate(row):
+                if tile != "wall":
+                    pyxel.rect(self.board_x + x * size, self.board_y + y * size, size, size, 5)
+        # Completed route in blue; future choices remain visible.
+        for (x, y), used in self.visited.items():
+            if used and (x % 2 == 0 or y % 2 == 0):
+                cx, cy = self.center(x, y)
+                if x % 2 == 0:
+                    pyxel.rect(cx - size, cy - 2, size * 2, 5, 12)
+                else:
+                    pyxel.rect(cx - 2, cy - size, 5, size * 2, 12)
+        for y in range(1, self.board_size - 1, 2):
+            for x in range(1, self.board_size - 1, 2):
+                tile = self.board[y][x]
+                cx, cy = self.center(x, y)
+                color = 9 if tile in ("x2", "x3") else 3
+                if tile == "goal":
+                    color = 10
+                pyxel.rect(cx - 10, cy - 10, 21, 21, color)
+                pyxel.rectb(cx - 10, cy - 10, 21, 21, 7 if self.visited[(x, y)] else color)
+                label = "S" if tile == "start" else "G" if tile == "goal" else str(tile)
+                self.text_center(cx, cy, label, 1 if tile in ("x2", "x3", "goal") else 7)
+        cx, cy = self.center(*self.player_pos)
+        pyxel.rectb(cx - 12, cy - 12, 25, 25, 10)
+        pyxel.circ(cx, cy - 8, 2, 10)
+        state = self.share_state()
+        message = {
+            "perfect": "PERFECT! THEORETICAL MAXIMUM",
+            "clear": "CLEAR! TRY ANOTHER ROUTE?",
+            "stuck": "NO MOVES - UNDO TO TRY AGAIN",
+            "playing": "FIND YOUR HIGHEST SCORING ROUTE",
+        }[state["status"]]
+        self.text_center(128, 276, message, 10 if state["status"] == "perfect" else 7)
+        self.text_center(128, 291, "ARROWS: MOVE  Z: UNDO  SPACE: RESET  M: SOUND", 6)
 
-        if self.game_over:
-            self.draw_game_over()
-
-    def draw_game_over(self):
-        # Create a window in the center of the screen
-        window_width = 150
-        window_height = 50
-        window_x = (self.width - window_width) // 2
-        window_y = (self.height - window_height) // 2
-        pyxel.rect(window_x, window_y, window_width, window_height, 6)
-        # Display the score and instructions in the window
-        pyxel.text(window_x + 20, window_y + 10, f"Score: {self.score}", 0)
-        pyxel.text(window_x + 20, window_y + 20, "Press space or a key to restart", 0)
-        pyxel.text(5, self.height - 10, "Hint: A different maze will be generated tomorrow", 7)
-
-    #Javascriptへのスコア共有用のメソッド
-    def share_score(self):
-        js.score = self.score
-    
-    def is_reset_button_pressed(self):
-        return (pyxel.btnp(pyxel.KEY_SPACE) or 
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A) or 
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or 
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X) or 
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_Y) or 
-                pyxel.btnp(pyxel.KEY_A))  # 何かキーが押されたら
 
 if __name__ == "__main__":
-    # 現在の日付を取得
-    now = datetime.now()
-    # 日付をYYYYMMDDの形式に変換
-    global seed
-    seed = int(now.strftime("%Y%m%d"))
-    Game(seed=seed)    # 1日ごとに同じ経路が生成される
+    Game(seed=int(datetime.now().strftime("%Y%m%d")))
