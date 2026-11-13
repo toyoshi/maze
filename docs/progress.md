@@ -30,7 +30,7 @@ Branch: `codex/software-factory-foundation`, based on `34fe31e`.
 
 ## Limits and next steps
 
-- Latest local execution uses Python 3.12 on macOS. Push, draft PR creation, and latest-commit GitHub CI verification are the next authorized steps; CI results will be recorded after they are observed.
+- Pushed the reviewed implementation (`4c9709b`) and opened draft PR https://github.com/toyoshi/maze/pull/1. GitHub Actions Quality started on the PR. Latest-commit CI status and findings are reported in that PR; do not infer success from this progress file. Local execution used Python 3.12 on macOS.
 - Real iPhone Safari / Android Chrome testing is still needed for OS file-share behavior, audible output, touch comfort, and slow-network startup. Browser emulation is not physical-device certification.
 - No global skill installation or unattended feature loop is configured. Full original workflow would require a supported Claude primary environment and its referenced skills.
 - Next product iteration: gather real-device feedback, then refine visuals and sound against that feedback. Keep each change tied to a replayable scenario.
