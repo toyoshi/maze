@@ -1,0 +1,28 @@
+:root { color-scheme: dark; font-family: system-ui, sans-serif; background: #111827; color: #f3f4f6; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 16px 14px calc(18px + env(safe-area-inset-bottom)); }
+main { max-width: 460px; margin: auto; text-align: center; }
+header p { margin: 6px 0 12px; color: #cbd5e1; font-size: 13px; }
+header .eyebrow { color: #8ee4bd; font-size: 10px; letter-spacing: .22em; }
+h1 { margin: 0; font-size: 25px; letter-spacing: -.04em; }
+.game { overflow: hidden; border-radius: 16px; border: 1px solid #334155; background: #1d2b53; }
+pyxel-run { display: block; width: 100%; aspect-ratio: 256 / 304; }
+canvas { max-width: 100%; height: auto; image-rendering: pixelated; }
+#result { min-height: 20px; margin: 10px 0; color: #fbbf24; font-size: 13px; }
+.controls { display: flex; justify-content: center; align-items: center; gap: 24px; }
+button { min-width: 48px; min-height: 44px; border: 1px solid #475569; border-radius: 10px; background: #26344a; color: #f8fafc; font: inherit; font-size: 14px; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+button:active { background: #475569; transform: translateY(1px); }
+button:focus-visible { outline: 3px solid #fbbf24; outline-offset: 2px; }
+button:disabled { opacity: .45; cursor: default; }
+.dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 44px); gap: 5px; }
+.up { grid-column: 2; }.left { grid-column: 1; grid-row: 2; }.down { grid-column: 2; grid-row: 2; }.right { grid-column: 3; grid-row: 2; }
+.actions { display: grid; gap: 5px; }
+.actions button { padding: 0 14px; }
+.share { width: 100%; margin-top: 14px; background: #97e8bd; color: #11271c; border: none; font-weight: 700; }
+#shareStatus { font-size: 12px; min-height: 16px; color: #cbd5e1; margin: 8px 0; }
+details { text-align: left; font-size: 12px; line-height: 1.8; color: #cbd5e1; }
+@media (max-height: 760px) { header p:not(.eyebrow) { display: none; } header { margin-bottom: 8px; } .game { max-width: 310px; margin: auto; } }
+/* Pyxel injects full-screen defaults. Keep its real screen inside our card. */
+.game div#pyxel-screen { position: relative; left: auto; top: auto; width: 100%; height: auto; aspect-ratio: 256 / 304; }
+.game pyxel-run { display: none; }
+.game canvas#canvas { width: 100%; height: 100%; max-width: none; }

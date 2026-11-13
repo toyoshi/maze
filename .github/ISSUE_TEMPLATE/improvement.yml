@@ -1,0 +1,22 @@
+name: Improvement / 改善
+description: Define a small change with observable acceptance criteria.
+title: '[Improvement] '
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Desired behavior / 望む体験
+      description: Who does what, and what should happen?
+    validations:
+      required: true
+  - type: textarea
+    id: scenarios
+    attributes:
+      label: Acceptance scenarios / 受入条件
+      description: Include starting state, actions, expected outcome, and failure cases.
+    validations:
+      required: true
+  - type: textarea
+    id: limits
+    attributes:
+      label: Constraints and open decisions / 制約・未決事項
