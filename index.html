@@ -16,13 +16,19 @@
     <section class="game" aria-label="ゲーム画面">
       <div id="pyxel-screen"><pyxel-run root="." name="main.py"></pyxel-run></div>
     </section>
+    <section class="scoreboard" aria-label="スコア">
+      <div><span>SCORE</span><strong id="scoreValue">—</strong></div>
+      <div><span>LAST MOVE</span><strong id="scoreDelta">—</strong></div>
+      <div><button id="maximumButton" data-action="reveal" disabled>理論最高点を見る</button><strong id="maximumValue">?</strong></div>
+    </section>
+    <p id="milestoneMessage" role="status" aria-live="polite"></p>
     <p id="result" role="status" aria-live="polite">画面をタップしてスタート</p>
     <section class="controls" aria-label="ゲーム操作">
       <div class="dpad" aria-label="移動">
-        <button class="up" data-action="up" aria-label="上へ">▲</button>
-        <button class="left" data-action="left" aria-label="左へ">◀</button>
-        <button class="down" data-action="down" aria-label="下へ">▼</button>
-        <button class="right" data-action="right" aria-label="右へ">▶</button>
+        <button class="up" data-action="up" disabled aria-label="上へ">▲</button>
+        <button class="left" data-action="left" disabled aria-label="左へ">◀</button>
+        <button class="down" data-action="down" disabled aria-label="下へ">▼</button>
+        <button class="right" data-action="right" disabled aria-label="右へ">▶</button>
       </div>
       <div class="actions">
         <button data-action="undo" id="undoButton" disabled>↶ 1手戻す</button>
@@ -35,8 +41,9 @@
     <details><summary>遊び方・操作</summary>
       <p>同じ道は一度だけ通れます。別の道から同じ数字や倍率に入ると、もう一度加算・乗算されます。ゴールに入ると終了です。</p>
       <p>反対方向のボタン、または「1手戻す」でスコアも経路も元に戻せます。ゴール後や行き止まりからも戻せます。</p>
-      <p>理論最高点は、この盤面でゴールまでに獲得できる最大スコアです。最高点でゴールするとPERFECTになります。日付はゲーム開始時の端末の日付です。</p>
-      <p>キーボード：矢印で移動、Zで戻す、Spaceでリセット、Mで音の切替。ゲームパッド：十字キー、Bで戻す、Aでリセット。</p>
+      <p>理論最高点は「理論最高点を見る」を押すまで表示しません。表示後、最高点でゴールしていればPERFECTになります。同じ盤面では最初からやり直しても表示は維持されます。日付はゲーム開始時の端末の日付です。</p>
+      <p>100点・200点に初めて到達するとお祝いの演出があります。巻き戻しで得点を戻しても同じ到達点の演出は繰り返しません。「最初から」で再挑戦するとリセットされます。</p>
+      <p>キーボード：矢印で移動、Zで戻す、Spaceでリセット、Mで音の切替、Hで理論最高点を表示。ゲームパッド：十字キー、Bで戻す、Aでリセット。</p>
       <p>シェア画像には経路・現在位置・手数を載せません。画像共有は対応ブラウザの共有メニューを使います。未対応の場合はPNGを保存します。</p>
     </details>
   </main>

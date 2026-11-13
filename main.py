@@ -145,6 +145,16 @@ class GameState:
                     stack.append((q, used | bit, self.score_after(score, self.board[q[1]][q[0]])))
         return maximum
 
+    def get_action_options(self):
+        directions = {"up": (0, -2), "down": (0, 2), "left": (-2, 0), "right": (2, 0)}
+        valid = self.get_valid_moves() if not self.game_over else []
+        options = {name: "move" for name, delta in directions.items() if delta in valid}
+        if self.history:
+            previous = self.history[-1][0]
+            reverse = (previous[0] - self.player_pos[0], previous[1] - self.player_pos[1])
+            options.update({name: "undo" for name, delta in directions.items() if delta == reverse})
+        return options
+
     def share_state(self):
         won = tuple(self.player_pos) == self.goal_pos
         return {
@@ -155,6 +165,7 @@ class GameState:
             "visited": [[x, y] for (x, y), used in self.visited.items() if used],
             "maximum": self.maximum_score,
             "moves": len(self.history),
+            "actions": self.get_action_options(),
             "status": "perfect"
             if won and self.score == self.maximum_score
             else "clear"
@@ -165,11 +176,48 @@ class GameState:
         }
 
 
+class ScoreFeedback:
+    """Transient presentation only; undo never changes the scoring contract."""
+
+    def __init__(self):
+        self.celebrated = set()
+        self.milestone = 0
+        self.frames = 0
+        self.delta_frames = 0
+        self.event = {"action": "reset", "delta": 0, "milestone": 0}
+
+    def record(self, before, after, action):
+        reached = [
+            threshold
+            for threshold in (100, 200)
+            if action == "move" and before < threshold <= after and threshold not in self.celebrated
+        ]
+        self.celebrated.update(reached)
+        self.event = {
+            "action": action,
+            "delta": after - before,
+            "milestone": max(reached, default=0),
+        }
+        self.delta_frames = 45
+        if action == "undo":
+            self.frames = 0
+            self.milestone = 0
+        elif reached:
+            self.milestone = max(reached)
+            self.frames = 90
+        return self.event["milestone"]
+
+    def tick(self):
+        self.frames = max(0, self.frames - 1)
+        self.delta_frames = max(0, self.delta_frames - 1)
+
+
 class Game(GameState):
     def __init__(self, board_size=9, seed=None):
         if pyxel is None:
             raise RuntimeError("Install Pyxel: pip install -r requirements.txt")
         self.sound_enabled = True
+        self.maximum_revealed = False
         super().__init__(board_size, seed)
         self.width, self.height = 256, 304
         self.cell_size = 26 if board_size == 9 else 33
@@ -184,21 +232,51 @@ class Game(GameState):
                 ("e3c3", "p", 5),
                 ("c3e3g3c4", "t", 8),
                 ("c2", "n", 5),
+                ("c3e3g3c4e4", "t", 7),
+                ("c3e3g3c4e4g4c4", "t", 6),
             ]
         ):
             pyxel.sounds[index].set(notes, tone, "4", "f", speed)
         self.publish_state()
         pyxel.run(self.update, self.draw)
 
-    def publish_state(self):
+    def reset_game(self):
+        super().reset_game()
+        self.feedback = ScoreFeedback()
+
+    def share_state(self):
+        state = super().share_state()
+        state["maximumRevealed"] = self.maximum_revealed
+        if not self.maximum_revealed:
+            state["maximum"] = None
+            if state["status"] == "perfect":
+                state["status"] = "clear"
+        return state
+
+    def publish_state(self, include_feedback=False):
         if js is not None:
-            js.updateGameState(json.dumps(self.share_state()))
+            state = self.share_state()
+            state["feedback"] = self.feedback.event if include_feedback else {"action": "sync"}
+            js.updateGameState(json.dumps(state))
 
     def update(self):
+        self.feedback.tick()
         action = ""
         if js is not None:
             action = str(js.pendingGameAction)
             js.pendingGameAction = ""
+        if (
+            pyxel.btnp(pyxel.KEY_H)
+            or action == "reveal"
+            or (
+                pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                and 137 <= pyxel.mouse_x < 245
+                and 15 <= pyxel.mouse_y < 31
+            )
+        ):
+            self.maximum_revealed = True
+            self.publish_state()
+            return
         if pyxel.btnp(pyxel.KEY_M) or action == "mute":
             self.sound_enabled = not self.sound_enabled
             if not self.sound_enabled:
@@ -206,13 +284,17 @@ class Game(GameState):
             if js is not None:
                 js.setSoundEnabled(self.sound_enabled)
         if pyxel.btnp(pyxel.KEY_Z) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B) or action == "undo":
+            before = self.score
             if self.undo():
+                self.feedback.record(before, self.score, "undo")
+                pyxel.stop(1)
                 self.play_sound(2)
-                self.publish_state()
+                self.publish_state(include_feedback=True)
             return
         if pyxel.btnp(pyxel.KEY_SPACE) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A) or action == "reset":
             self.reset_game()
-            self.publish_state()
+            pyxel.stop(1)
+            self.publish_state(include_feedback=True)
             return
         directions = [
             ("up", pyxel.KEY_UP, pyxel.GAMEPAD1_BUTTON_DPAD_UP, 0, -2),
@@ -222,8 +304,12 @@ class Game(GameState):
         ]
         for name, key, pad, dx, dy in directions:
             if pyxel.btnp(key) or pyxel.btnp(pad) or action == name:
+                before = self.score
                 result = self.step(dx, dy)
                 if result:
+                    milestone = self.feedback.record(before, self.score, result)
+                    if result == "undo":
+                        pyxel.stop(1)
                     tile = self.board[self.player_pos[1]][self.player_pos[0]]
                     cue = (
                         2
@@ -234,15 +320,18 @@ class Game(GameState):
                         if tile in ("x2", "x3")
                         else 0
                     )
+                    # Milestone fanfare uses another channel so clear still sounds.
                     self.play_sound(cue)
-                    self.publish_state()
+                    if milestone:
+                        self.play_sound(6 if milestone == 200 else 5, channel=1)
+                    self.publish_state(include_feedback=True)
                 else:
                     self.play_sound(4)
                 break
 
-    def play_sound(self, index):
+    def play_sound(self, index, channel=0):
         if self.sound_enabled:
-            pyxel.play(0, index)
+            pyxel.play(channel, index)
 
     def center(self, x, y):
         return (
@@ -258,7 +347,12 @@ class Game(GameState):
         pyxel.cls(1)
         pyxel.text(12, 9, "THREE NOTES QUEST", 7)
         pyxel.text(12, 22, f"SCORE {self.score}", 10)
-        pyxel.text(137, 22, f"BEST POSSIBLE {self.maximum_score}", 11)
+        best_label = f"BEST {self.maximum_score}" if self.maximum_revealed else "BEST: CLICK / H"
+        pyxel.text(137, 22, best_label, 11)
+        if self.feedback.delta_frames and self.feedback.event["action"] in ("move", "undo"):
+            delta = self.feedback.event["delta"]
+            label = f"UNDO {delta:+}" if self.feedback.event["action"] == "undo" else f"{delta:+}"
+            pyxel.text(85, 22, label, 11 if delta > 0 else 6)
         size = self.cell_size
         for y, row in enumerate(self.board):
             for x, tile in enumerate(row):
@@ -294,7 +388,18 @@ class Game(GameState):
             "playing": "FIND YOUR HIGHEST SCORING ROUTE",
         }[state["status"]]
         self.text_center(128, 276, message, 10 if state["status"] == "perfect" else 7)
-        self.text_center(128, 291, "ARROWS: MOVE  Z: UNDO  SPACE: RESET  M: SOUND", 6)
+        if self.feedback.frames:
+            color = 10 if self.feedback.milestone == 200 else 11
+            self.text_center(128, 291, f"{self.feedback.milestone} POINTS! AMAZING ROUTE!", color)
+            reduced_motion = js is not None and bool(js.reducedMotion)
+            if not reduced_motion:
+                # Confetti stays in the outer margins: no board occlusion or flash.
+                for index in range(16 if self.feedback.milestone == 200 else 8):
+                    x = 3 if index % 2 else self.width - 6
+                    y = 40 + ((90 - self.feedback.frames) * 3 + index * 29) % 220
+                    pyxel.rect(x, y, 3, 3, (10, 11, 12)[index % 3])
+        else:
+            self.text_center(128, 291, "ARROWS: MOVE  Z: UNDO  SPACE: RESET  M: SOUND", 6)
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ import json
 import random
 import unittest
 
-from main import GameState
+from main import GameState, ScoreFeedback
 
 
 def brute_force_maximum(game):
@@ -170,10 +170,62 @@ class RulesTests(unittest.TestCase):
         self.assertEqual(g.share_state()["status"], "playing")
         self.assertEqual(g.share_state()["moves"], 5)
 
+    def test_action_options_expose_only_moves_and_reverse_undo(self):
+        g = self.game
+        self.assertEqual(g.get_action_options(), {"down": "move", "right": "move"})
+        g.move_player(2, 0)
+        self.assertEqual(g.get_action_options(), {"down": "move", "right": "move", "left": "undo"})
+        for move in [(2, 0)] * 2 + [(0, 2)] * 3:
+            g.move_player(*move)
+        self.assertTrue(g.game_over)
+        self.assertEqual(g.get_action_options(), {"up": "undo"})
+        g.step(0, -2)
+        self.assertIn("down", g.get_action_options())
+        self.assertFalse(g.game_over)
+
     def test_unsupported_board_size_fails_instead_of_infinite_generation(self):
         for size in (0, 5, 8, 11):
             with self.assertRaises(ValueError):
                 GameState(board_size=size)
+
+
+class FeedbackTests(unittest.TestCase):
+    def test_thresholds_trigger_at_exact_boundary_and_only_on_upward_moves(self):
+        feedback = ScoreFeedback()
+        self.assertEqual(feedback.record(98, 99, "move"), 0)
+        self.assertEqual(feedback.record(99, 100, "move"), 100)
+        self.assertEqual(feedback.record(100, 199, "move"), 0)
+        self.assertEqual(feedback.record(199, 200, "move"), 200)
+        self.assertEqual(feedback.event["delta"], 1)
+
+    def test_large_jump_celebrates_highest_and_marks_both_thresholds(self):
+        feedback = ScoreFeedback()
+        self.assertEqual(feedback.record(80, 240, "move"), 200)
+        self.assertEqual(feedback.celebrated, {100, 200})
+        self.assertEqual(feedback.record(240, 80, "undo"), 0)
+        self.assertEqual(feedback.frames, 0)
+        self.assertEqual(feedback.record(80, 240, "move"), 0)
+        self.assertEqual(feedback.frames, 0)
+
+    def test_undo_stops_effect_and_reset_allows_new_celebration(self):
+        feedback = ScoreFeedback()
+        feedback.record(90, 120, "move")
+        self.assertGreater(feedback.frames, 0)
+        feedback.record(120, 90, "undo")
+        self.assertEqual(feedback.event["delta"], -30)
+        self.assertEqual(feedback.frames, 0)
+        self.assertEqual(feedback.milestone, 0)
+        self.assertEqual(feedback.record(90, 120, "move"), 0)
+        self.assertEqual(ScoreFeedback().record(90, 120, "move"), 100)
+
+    def test_effect_expires_without_changing_score_or_achievement_memory(self):
+        feedback = ScoreFeedback()
+        feedback.record(50, 100, "move")
+        for _ in range(100):
+            feedback.tick()
+        self.assertEqual(feedback.frames, 0)
+        self.assertEqual(feedback.delta_frames, 0)
+        self.assertEqual(feedback.celebrated, {100})
 
 
 if __name__ == "__main__":

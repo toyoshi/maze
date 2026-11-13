@@ -25,7 +25,7 @@
     ctx.fillText(`SCORE ${state.score}`, 450, 239);
     ctx.fillStyle = palette.text;
     ctx.font = '24px sans-serif';
-    ctx.fillText(`BEST POSSIBLE ${state.maximum}`, 450, 282);
+    ctx.fillText(state.maximum == null ? 'DAILY CHALLENGE' : `BEST POSSIBLE ${state.maximum}`, 450, 282);
     const n = state.board.length;
     const cell = 720 / n;
     const left = 90;
@@ -67,15 +67,53 @@
   root.pendingGameAction = '';
   let state = null;
   let canvas = null;
+  let celebrationTimer = null;
+  root.reducedMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (typeof matchMedia === 'function') {
+    matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', event => {
+      root.reducedMotion = event.matches;
+    });
+  }
   root.updateGameState = function (json) {
     state = JSON.parse(json);
     // Only public result data reaches the PNG renderer; route details stay in play.
     const publicState = { mapId: state.mapId, board: state.board, score: state.score,
-      maximum: state.maximum, status: state.status };
+      maximum: state.maximumRevealed ? state.maximum : null, status: state.status };
     canvas = renderCard(document.createElement('canvas'), publicState);
     const labels = { perfect: '理論最高点でクリア！ PERFECT', clear: 'クリア！ 戻って別の経路も試せます',
-      stuck: '行き止まり。「1手戻す」で再挑戦できます', playing: `スコア ${state.score} ／ 理論最高点 ${state.maximum}` };
+      stuck: '行き止まり。「1手戻す」で再挑戦できます', playing: '数字と倍率をつないで高得点を狙おう' };
     document.getElementById('result').textContent = labels[state.status];
+    document.getElementById('scoreValue').textContent = String(state.score);
+    document.getElementById('maximumValue').textContent = state.maximumRevealed ? String(state.maximum) : '?';
+    document.getElementById('maximumButton').disabled = !!state.maximumRevealed;
+    document.getElementById('maximumButton').textContent = state.maximumRevealed ? '理論最高点' : '理論最高点を見る';
+    const feedback = state.feedback || {action: 'reset', delta: 0, milestone: 0};
+    if (feedback.action !== 'sync') {
+      document.getElementById('scoreDelta').textContent = feedback.action === 'reset' ? '—' :
+        `${feedback.action === 'undo' ? '↶ ' : ''}${feedback.delta > 0 ? '+' : ''}${feedback.delta}`;
+    }
+    const celebration = document.getElementById('milestoneMessage');
+    if (feedback.action === 'undo' || feedback.action === 'reset') {
+      clearTimeout(celebrationTimer);
+      celebration.textContent = '';
+      celebration.removeAttribute('data-tier');
+    } else if (feedback.milestone) {
+      clearTimeout(celebrationTimer);
+      celebration.dataset.tier = String(feedback.milestone);
+      celebration.textContent = feedback.milestone === 200 ? '200点到達！すばらしいルート！' : '100点到達！いい調子！';
+      celebrationTimer = setTimeout(() => {
+        celebration.textContent = '';
+        celebration.removeAttribute('data-tier');
+      }, 3000);
+    }
+    const directionLabels = {up: '上へ', down: '下へ', left: '左へ', right: '右へ'};
+    Object.entries(directionLabels).forEach(([name, label]) => {
+      const button = document.querySelector(`[data-action="${name}"]`);
+      const kind = (state.actions || {})[name];
+      button.disabled = !kind;
+      button.dataset.kind = kind || 'blocked';
+      button.setAttribute('aria-label', label + (kind === 'undo' ? '（1手戻す）' : ''));
+    });
     document.getElementById('undoButton').disabled = state.moves === 0;
     document.getElementById('shareButton').disabled = false;
   };
@@ -99,7 +137,7 @@
       const file = imageFile(canvas, state.mapId);
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: 'ThreeNotesQuest',
-          text: `Score: ${state.score} / ${state.maximum} MAP ${state.mapId} #ThreeNotesQuest https://threen.netlify.app/` });
+          text: `Score: ${state.score}${state.maximumRevealed ? ` / ${state.maximum}` : ''} MAP ${state.mapId} #ThreeNotesQuest https://threen.netlify.app/` });
         status.textContent = '画像を共有しました';
       } else {
         download(file);
