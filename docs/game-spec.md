@@ -27,7 +27,9 @@
 
 - Corridors, the used route, numbers, multipliers, start, goal, and player are visually distinct. Labels carry meaning in addition to color.
 - Move, multiplier, undo, clear, and blocked-move events have short distinct audio cues. M or the browser sound button toggles audio.
-- A 320px-wide browser has no horizontal overflow. Direction and action touch targets are at least 44px wide/high. Controls remain accessible through scrolling on short displays.
+- At 320×568, 375×667 and 390×844 portrait, and 844×390 landscape, the game board, score and movement controls fit within the viewport at default text size without horizontal overflow. Sharing and help may require scrolling on short displays. Safe-area padding is reserved. Direction/undo controls are at least 52px on these phone layouts; other actions remain at least 44px.
+- Web mode has a compact board-only canvas (256×244); native Pyxel retains its 256×304 HUD. The browser score/feedback must remain visible, including milestones and terminal states.
+- One deliberate axial touch/pen swipe of at least 24 CSS pixels makes one move or reverse undo. Ignore ordinary taps, near-diagonal gestures, cancellation and multitouch. Prevent touch scrolling only on the board; scrolling outside it remains possible. Two quick enabled-button taps must both reach the game in order; the bounded eight-action queue prevents unbounded backlog.
 - The actual WASM game must start and respond to phone controls, rather than merely displaying a phone-shaped mockup.
 
 ## Score feedback and input guidance

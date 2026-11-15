@@ -184,6 +184,82 @@ try:
             page.evaluate("window.testSnapshot.maximum")
         )
         assert page.locator("#maximumButton").is_disabled()
+        # Actual Chromium touch events: a swipe moves once and never scrolls
+        # the board away; taps/diagonals/cancel/multitouch are ignored.
+        board_box = page.locator(".game").bounding_box()
+        page.locator(".game").scroll_into_view_if_needed()
+        board_box = page.locator(".game").bounding_box()
+        cx, cy = board_box["x"] + board_box["width"] / 2, board_box["y"] + board_box["height"] / 2
+        touch = page.context.new_cdp_session(page)
+        initial_scroll = page.evaluate("scrollY")
+
+        def swipe(dx, dy, cancel=False):
+            touch.send(
+                "Input.dispatchTouchEvent",
+                {"type": "touchStart", "touchPoints": [{"x": cx, "y": cy}]},
+            )
+            touch.send(
+                "Input.dispatchTouchEvent",
+                {"type": "touchMove", "touchPoints": [{"x": cx + dx, "y": cy + dy}]},
+            )
+            touch.send(
+                "Input.dispatchTouchEvent",
+                {"type": "touchCancel" if cancel else "touchEnd", "touchPoints": []},
+            )
+
+        swipe(60, 0)
+        page.wait_for_function("window.testSnapshot.moves === 1")
+        assert page.evaluate("scrollY") == initial_scroll
+        swipe(-60, 0)
+        page.wait_for_function("window.testSnapshot.moves === 0")
+        swipe(2, 3)
+        swipe(40, 40)
+        swipe(60, 0, cancel=True)
+        touch.send(
+            "Input.dispatchTouchEvent",
+            {"type": "touchStart", "touchPoints": [{"x": cx, "y": cy}, {"x": cx + 20, "y": cy}]},
+        )
+        touch.send(
+            "Input.dispatchTouchEvent",
+            {
+                "type": "touchMove",
+                "touchPoints": [{"x": cx + 60, "y": cy}, {"x": cx + 80, "y": cy}],
+            },
+        )
+        touch.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        # A second finger outside the board must cancel the board swipe too.
+        outside_y = page.locator(".scoreboard").bounding_box()["y"] + 10
+        touch.send(
+            "Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": cx, "y": cy}]}
+        )
+        touch.send(
+            "Input.dispatchTouchEvent",
+            {"type": "touchStart", "touchPoints": [{"x": cx, "y": cy}, {"x": 20, "y": outside_y}]},
+        )
+        touch.send(
+            "Input.dispatchTouchEvent",
+            {
+                "type": "touchMove",
+                "touchPoints": [{"x": cx + 60, "y": cy}, {"x": 20, "y": outside_y}],
+            },
+        )
+        touch.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        # Enqueue a valid move after the ignored gestures; any erroneous gesture
+        # would be observed as extra history instead of a timing-based sleep.
+        page.locator("[data-action=right]").tap()
+        page.wait_for_function("window.testSnapshot.moves === 1")
+        assert page.evaluate("window.testSnapshot.player") == [3, 1]
+        page.locator("#undoButton").tap()
+        page.wait_for_function("window.testSnapshot.moves === 0")
+        page.evaluate("""() => {
+          document.querySelector('[data-action=right]').click();
+          document.querySelector('[data-action=down]').click();
+        }""")
+        page.wait_for_function("window.testSnapshot.moves === 2")
+        assert page.evaluate("window.testSnapshot.player") == [3, 3]
+        page.locator("[data-action=reset]").tap()
+        page.wait_for_function("window.testSnapshot.moves === 0")
+        touch.detach()
         page.locator("[data-action=right]").tap()
         page.wait_for_function("!document.querySelector('#undoButton').disabled")
         page.locator("#undoButton").tap()
@@ -242,9 +318,41 @@ try:
                 width,
                 height,
             )
+            # On phones the whole play surface fits without scrolling.
+            page.evaluate("scrollTo(0, 0)")
+            if width <= 600 or height <= 500:
+                for selector in (".game", ".scoreboard", ".controls"):
+                    box = page.locator(selector).bounding_box()
+                    assert box["y"] >= 0 and box["y"] + box["height"] <= height, (
+                        width,
+                        height,
+                        selector,
+                        box,
+                    )
+            if width == 320 and os.environ.get("MAZE_SMALL_SCREENSHOT"):
+                page.screenshot(path=os.environ["MAZE_SMALL_SCREENSHOT"], full_page=True)
+            if width == 844 and os.environ.get("MAZE_LANDSCAPE_SCREENSHOT"):
+                page.screenshot(path=os.environ["MAZE_LANDSCAPE_SCREENSHOT"], full_page=True)
             for action in ("up", "left", "right", "down", "undo"):
                 box = page.locator(f"[data-action={action}]").bounding_box()
-                assert box["width"] >= 44 and box["height"] >= 44
+                minimum = 52 if width <= 600 or height <= 500 else 44
+                assert box["width"] >= minimum and box["height"] >= minimum
+        # Synthetic safe-area values cover the CSS contract without claiming
+        # that Chromium emulation certifies a physical Safari notch.
+        page.set_viewport_size({"width": 375, "height": 667})
+        safe_css = (
+            (ROOT / "style.css")
+            .read_text()
+            .replace("env(safe-area-inset-top)", "30px")
+            .replace("env(safe-area-inset-bottom)", "20px")
+        )
+        safe_style = page.add_style_tag(content=safe_css)
+        page.evaluate("scrollTo(0, 0)")
+        assert page.locator("header").bounding_box()["y"] >= 38
+        safe_controls = page.locator(".controls").bounding_box()
+        assert safe_controls["y"] + safe_controls["height"] <= 647
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+        safe_style.evaluate("(element) => element.remove()")
         page.set_viewport_size({"width": 390, "height": 844})
         # Verify non-cancellation errors expose the PNG fallback link.
         page.evaluate(
