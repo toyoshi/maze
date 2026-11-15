@@ -64,7 +64,11 @@
   }
 
   root.renderShareCard = renderCard;
-  root.pendingGameAction = '';
+  const actions = [];
+  function enqueueAction(action) {
+    if (actions.length < 8) actions.push(action);
+  }
+  root.takeGameAction = () => actions.shift() || '';
   let state = null;
   let canvas = null;
   let celebrationTimer = null;
@@ -125,7 +129,42 @@
 
   if (typeof document === 'undefined') return;
   document.querySelectorAll('[data-action]').forEach(button => {
-    button.addEventListener('click', () => { root.pendingGameAction = button.dataset.action; });
+    button.addEventListener('click', () => { enqueueAction(button.dataset.action); });
+  });
+  // One deliberate swipe is one action; ordinary taps, diagonals and multitouch
+  // never move. Only the board captures touch scrolling, not the whole page.
+  const board = document.querySelector('.game');
+  let gesture = null;
+  const activeTouches = new Set();
+  document.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse') return;
+    activeTouches.add(event.pointerId);
+    if (activeTouches.size > 1) gesture = null;
+  }, {capture: true});
+  for (const eventName of ['pointerup', 'pointercancel']) {
+    document.addEventListener(eventName, event => activeTouches.delete(event.pointerId), {capture: true});
+  }
+  window.addEventListener('blur', () => { gesture = null; activeTouches.clear(); });
+  board.addEventListener('pointerdown', event => {
+    if (!state || event.pointerType === 'mouse' || !event.isPrimary || activeTouches.size !== 1) {
+      gesture = null;
+      return;
+    }
+    gesture = {id: event.pointerId, x: event.clientX, y: event.clientY};
+    board.setPointerCapture(event.pointerId);
+  });
+  board.addEventListener('pointercancel', () => { gesture = null; });
+  board.addEventListener('pointerup', event => {
+    if (!gesture || gesture.id !== event.pointerId) return;
+    const dx = event.clientX - gesture.x;
+    const dy = event.clientY - gesture.y;
+    gesture = null;
+    const major = Math.max(Math.abs(dx), Math.abs(dy));
+    const minor = Math.min(Math.abs(dx), Math.abs(dy));
+    if (major < 24 || major < minor * 1.3) return;
+    const action = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') :
+      (dy > 0 ? 'down' : 'up');
+    if (state.actions && state.actions[action]) enqueueAction(action);
   });
   document.getElementById('shareButton').addEventListener('click', async () => {
     if (!state || !canvas) return;

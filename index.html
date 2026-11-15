@@ -21,8 +21,10 @@
       <div><span>LAST MOVE</span><strong id="scoreDelta">—</strong></div>
       <div><button id="maximumButton" data-action="reveal" disabled>理論最高点を見る</button><strong id="maximumValue">?</strong></div>
     </section>
+    <div class="feedback">
     <p id="milestoneMessage" role="status" aria-live="polite"></p>
     <p id="result" role="status" aria-live="polite">画面をタップしてスタート</p>
+    </div>
     <section class="controls" aria-label="ゲーム操作">
       <div class="dpad" aria-label="移動">
         <button class="up" data-action="up" disabled aria-label="上へ">▲</button>
@@ -39,6 +41,7 @@
     <button id="shareButton" class="share" disabled>画像でシェア / 保存</button>
     <p id="shareStatus" role="status" aria-live="polite"></p>
     <details><summary>遊び方・操作</summary>
+      <p>盤面を上下左右にスワイプするか、方向ボタンで移動します。短いタップでは移動しません。ページをスクロールするときは盤面の外をなぞってください。</p>
       <p>同じ道は一度だけ通れます。別の道から同じ数字や倍率に入ると、もう一度加算・乗算されます。ゴールに入ると終了です。</p>
       <p>反対方向のボタン、または「1手戻す」でスコアも経路も元に戻せます。ゴール後や行き止まりからも戻せます。</p>
       <p>理論最高点は「理論最高点を見る」を押すまで表示しません。表示後、最高点でゴールしていればPERFECTになります。同じ盤面では最初からやり直しても表示は維持されます。日付はゲーム開始時の端末の日付です。</p>

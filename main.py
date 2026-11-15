@@ -216,13 +216,14 @@ class Game(GameState):
     def __init__(self, board_size=9, seed=None):
         if pyxel is None:
             raise RuntimeError("Install Pyxel: pip install -r requirements.txt")
+        self.web = js is not None
         self.sound_enabled = True
         self.maximum_revealed = False
         super().__init__(board_size, seed)
-        self.width, self.height = 256, 304
+        self.width, self.height = 256, (244 if self.web else 304)
         self.cell_size = 26 if board_size == 9 else 33
         self.board_x = (self.width - board_size * self.cell_size) // 2
-        self.board_y = 35
+        self.board_y = 5 if self.web else 35
         pyxel.init(self.width, self.height, title="ThreeNotesQuest")
         # Short, distinct cues: move, multiplier, undo, goal, blocked.
         for index, (notes, tone, speed) in enumerate(
@@ -263,13 +264,13 @@ class Game(GameState):
         self.feedback.tick()
         action = ""
         if js is not None:
-            action = str(js.pendingGameAction)
-            js.pendingGameAction = ""
+            action = str(js.takeGameAction())
         if (
             pyxel.btnp(pyxel.KEY_H)
             or action == "reveal"
             or (
-                pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
+                not self.web
+                and pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT)
                 and 137 <= pyxel.mouse_x < 245
                 and 15 <= pyxel.mouse_y < 31
             )
@@ -345,14 +346,19 @@ class Game(GameState):
 
     def draw(self):
         pyxel.cls(1)
-        pyxel.text(12, 9, "THREE NOTES QUEST", 7)
-        pyxel.text(12, 22, f"SCORE {self.score}", 10)
-        best_label = f"BEST {self.maximum_score}" if self.maximum_revealed else "BEST: CLICK / H"
-        pyxel.text(137, 22, best_label, 11)
-        if self.feedback.delta_frames and self.feedback.event["action"] in ("move", "undo"):
-            delta = self.feedback.event["delta"]
-            label = f"UNDO {delta:+}" if self.feedback.event["action"] == "undo" else f"{delta:+}"
-            pyxel.text(85, 22, label, 11 if delta > 0 else 6)
+        if not self.web:
+            pyxel.text(12, 9, "THREE NOTES QUEST", 7)
+            pyxel.text(12, 22, f"SCORE {self.score}", 10)
+            best_label = (
+                f"BEST {self.maximum_score}" if self.maximum_revealed else "BEST: CLICK / H"
+            )
+            pyxel.text(137, 22, best_label, 11)
+            if self.feedback.delta_frames and self.feedback.event["action"] in ("move", "undo"):
+                delta = self.feedback.event["delta"]
+                label = (
+                    f"UNDO {delta:+}" if self.feedback.event["action"] == "undo" else f"{delta:+}"
+                )
+                pyxel.text(85, 22, label, 11 if delta > 0 else 6)
         size = self.cell_size
         for y, row in enumerate(self.board):
             for x, tile in enumerate(row):
@@ -387,18 +393,23 @@ class Game(GameState):
             "stuck": "NO MOVES - UNDO TO TRY AGAIN",
             "playing": "FIND YOUR HIGHEST SCORING ROUTE",
         }[state["status"]]
-        self.text_center(128, 276, message, 10 if state["status"] == "perfect" else 7)
+        if not self.web:
+            self.text_center(128, 276, message, 10 if state["status"] == "perfect" else 7)
         if self.feedback.frames:
             color = 10 if self.feedback.milestone == 200 else 11
-            self.text_center(128, 291, f"{self.feedback.milestone} POINTS! AMAZING ROUTE!", color)
+            if not self.web:
+                self.text_center(
+                    128, 291, f"{self.feedback.milestone} POINTS! AMAZING ROUTE!", color
+                )
             reduced_motion = js is not None and bool(js.reducedMotion)
             if not reduced_motion:
                 # Confetti stays in the outer margins: no board occlusion or flash.
                 for index in range(16 if self.feedback.milestone == 200 else 8):
                     x = 3 if index % 2 else self.width - 6
-                    y = 40 + ((90 - self.feedback.frames) * 3 + index * 29) % 220
+                    start, span = (8, self.height - 16) if self.web else (40, 220)
+                    y = start + ((90 - self.feedback.frames) * 3 + index * 29) % span
                     pyxel.rect(x, y, 3, 3, (10, 11, 12)[index % 3])
-        else:
+        elif not self.web:
             self.text_center(128, 291, "ARROWS: MOVE  Z: UNDO  SPACE: RESET  M: SOUND", 6)
 
 
