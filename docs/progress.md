@@ -29,3 +29,7 @@ Branch: `codex/mobile-playability`, based on `5e26b8d`.
 ## Limits / next step
 
 Phone emulation does not certify physical Safari touch handling, audible sound or the native OS sharing sheet. No recurring daemon is installed. For the actual iPhone app, begin with the deterministic GameCore PoC in `docs/iphone-plan.md`; use a physical iPhone and TestFlight before App Store submission.
+
+## Native release support pages (2026-11-15)
+
+Prepared `/ios/privacy.html` and `/ios/support.html` in 20 localizations for the separate SwiftUI app. Privacy describes offline/local save, OS backups, opt-in result PNG sharing, no developer collection or tracking, external link/support handling. Support provides user-authorized r@toyoshi.jp and this public repository’s issue tracker because the native repository is private. No Web gameplay code changes. Native release is still in preparation; neither page claims App Store availability. Fresh independent read-only review covers these pages. Deployment/HTTP evidence is recorded in the PR.
