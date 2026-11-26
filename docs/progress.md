@@ -37,3 +37,9 @@ Prepared `/ios/privacy.html` and `/ios/support.html` in 20 localizations for the
 ## Daily seed parity - 2026-11-26
 
 User reported different Web/iPhone seeds. Same-seed generation already matches; the native app previously preferred an older saved day. Web now explicitly uses the browser local Gregorian year/month/day through JavaScript Date, avoiding dependence on the WASM runtime timezone. Real WASM tests pin one instant at Tokyo/Los Angeles local date boundaries and compare the actual published map ID and board to Python. Existing19 rules tests, Pyxel smoke, full mobile browser/share/milestone suite and lint/format passed. Independent fresh-context read-only review and follow-up found no actionable defects. The same local date produces the same seed; different local dates across timezones intentionally differ. Native cold-launch/archive correction is tracked separately in the iPhone repository and is not yet public.
+
+## 2026-11-26 — native update support and privacy preparation
+
+Authorized next iPhone update adds an optional one-time optimal-route unlock (Japan¥100), while base play and numerical maximum reveal stay free. Refresh the public native support link to the already-public free1.0 listing; update bundled-policy export with StoreKit entitlement/purchase/restore processing in all20 languages. This does not add a paid feature or route disclosure to the Web game. Native1.1 remains in preparation/rejected until a new build and first IAP are submitted together; do not call it public yet.
+
+Checks:19 rule tests, Ruff lint/format, exported20-locale policy paragraphs from native source,375px Chrome support screenshot without horizontal overflow and correct App Store destination. Independent read-only review cleared these public-page changes. No Web gameplay/source/seed/share behavior changed.
