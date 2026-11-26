@@ -7,7 +7,9 @@ modified. Shared-file APIs are stubbed only for payload/cancellation checks.
 import functools
 import http.server
 import os
+import runpy
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -59,9 +61,7 @@ def check_milestone_journey(browser, port):
     )
     # Only this test page pins the daily seed. Production code has no test hook.
     fixture = (
-        (ROOT / "main.py")
-        .read_text()
-        .replace('Game(seed=int(datetime.now().strftime("%Y%m%d")))', "Game(seed=20261113)")
+        (ROOT / "main.py").read_text().replace("Game(seed=daily_seed())", "Game(seed=20261113)")
     )
     assert fixture != (ROOT / "main.py").read_text()
     page.route("**/main.py", lambda route: route.fulfill(body=fixture, content_type="text/plain"))
@@ -139,6 +139,31 @@ def check_milestone_journey(browser, port):
     else:
         raise AssertionError("Reset did not restore milestone eligibility")
     page.close()
+
+
+def check_local_daily_seed(browser, port):
+    # One instant falls on different local dates. The WASM game must use the
+    # browser's date, not its runtime's UTC date. Compare actual published boards.
+    state_type = runpy.run_path(str(ROOT / "main.py"))["GameState"]
+    instant = datetime(2026, 11, 25, 15, 30, tzinfo=timezone.utc)
+    for zone, expected in (("Asia/Tokyo", 20261126), ("America/Los_Angeles", 20261125)):
+        context = browser.new_context(timezone_id=zone)
+        page = context.new_page()
+        page.clock.install(time=instant)
+        page.goto(f"http://127.0.0.1:{port}", wait_until="domcontentloaded")
+        page.locator("#pyxel-prompt").wait_for(state="visible", timeout=90000)
+        page.locator("#pyxel-screen").click()
+        page.wait_for_function("!document.querySelector('#shareButton').disabled", timeout=90000)
+        page.evaluate("""() => {
+          const publish = window.updateGameState;
+          window.updateGameState = json => {window.testSnapshot = JSON.parse(json); publish(json);};
+        }""")
+        page.locator("[data-action=reset]").click()
+        page.wait_for_function("!!window.testSnapshot")
+        snapshot = page.evaluate("window.testSnapshot")
+        assert snapshot["mapId"] == str(expected), (zone, snapshot["mapId"])
+        assert snapshot["board"] == state_type(seed=expected).share_state()["board"]
+        context.close()
 
 
 server = http.server.ThreadingHTTPServer(
@@ -401,6 +426,7 @@ try:
         assert overlay.count() == 0, overlay.inner_text() if overlay.count() else ""
         assert not errors, errors
         check_milestone_journey(browser, server.server_port)
+        check_local_daily_seed(browser, server.server_port)
         browser.close()
         print("Mobile WASM, undo, mute, PNG download, native-share payload/cancel and layout: OK")
 finally:

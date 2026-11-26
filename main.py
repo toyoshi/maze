@@ -14,6 +14,18 @@ except ImportError:
     js = None
 
 
+def daily_seed():
+    """Use the device's Gregorian date, including in the WASM runtime."""
+    if js is not None:
+        today = js.Date.new()
+        return (
+            int(today.getFullYear()) * 10000
+            + (int(today.getMonth()) + 1) * 100
+            + int(today.getDate())
+        )
+    return int(datetime.now().strftime("%Y%m%d"))
+
+
 class GameState:
     """No graphics or audio dependencies; every successful move is reversible."""
 
@@ -414,4 +426,4 @@ class Game(GameState):
 
 
 if __name__ == "__main__":
-    Game(seed=int(datetime.now().strftime("%Y%m%d")))
+    Game(seed=daily_seed())

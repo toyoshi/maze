@@ -3,7 +3,7 @@
 ## Board and scoring
 
 - The default 9×9 board contains a 4×4 grid of intersections. Boundary cells and even/even cells are walls.
-- Start is (1,1); goal is (7,7). The board is seeded with the local date at game launch, in YYYYMMDD form. It stays the same across reset for that session. Reload after midnight to change the map.
+- Start is (1,1); goal is (7,7). The board is seeded with the device's local Gregorian date at game launch, in YYYYMMDD form. Web uses JavaScript Date's local year/month/day explicitly, matching native iPhone DailyPuzzle. It stays the same across reset for that session. Reload after midnight to change the map. Devices in different time zones may have different local dates; the same date/seed must generate the same board and maximum.
 - Intersections other than start and goal contain 1, 2, or 3, except two x2 tiles and one x3 tile.
 - A move traverses one corridor between neighboring intersections. A corridor may be used once. Another corridor may revisit an intersection; its number or multiplier applies again, matching the original game.
 - Reaching the goal ends forward play immediately. A dead end also ends forward play. Neither state prevents undo or reset.
